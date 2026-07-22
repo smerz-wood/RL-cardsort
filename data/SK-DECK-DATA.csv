@@ -1,0 +1,59 @@
+deck_id,card_id,source_category,card_text
+sk,sk-001,Research Resources,Databases
+sk,sk-002,Research Resources,Subject guides
+sk,sk-003,Research Resources,Print catalogue
+sk,sk-004,Research Resources,Collections updates (additions and cancellations)
+sk,sk-005,Research Resources,Zotero
+sk,sk-006,Research Resources,"Citing sources (for example, APA)"
+sk,sk-007,Prince Edward Island Collections,Digital historical collections
+sk,sk-008,Prince Edward Island Collections,Special collections
+sk,sk-009,Services,Print and scan
+sk,sk-010,Services,Interlibrary loan (ILL)
+sk,sk-011,Services,Reserves
+sk,sk-012,Services,"Scanning, including microform"
+sk,sk-013,Services,"Technology equipment you can borrow (for example, laptops and power adapters)"
+sk,sk-014,Services,Coloured pencils and other supplies you can borrow
+sk,sk-015,Services,Copyright advising for researcher publications
+sk,sk-016,Services,Pressbooks
+sk,sk-017,Services,Research data management (RDM)
+sk,sk-018,Services,Knowledge synthesis (KS)
+sk,sk-019,Services,Scholarly publishing
+sk,sk-020,Services,Grammarly
+sk,sk-021,Services,Off-campus access information (EZproxy and SSO)
+sk,sk-022,Services,Laminating and spiral covers
+sk,sk-023,Services,"Multimedia conversion (for example, VHS to digital or vinyl LP to MP3)"
+sk,sk-024,Research Help,Ask Us
+sk,sk-025,Research Help,Subject librarians
+sk,sk-026,Research Help,Database tutorials
+sk,sk-027,Research Help,Peer review: what it means and how to find peer-reviewed sources
+sk,sk-028,Research Help,Evaluating the quality of sources
+sk,sk-029,Research Help,Browser plugins that connect users to licensed full text
+sk,sk-030,Using the Library (Physical),Hours
+sk,sk-031,Using the Library (Physical),Floor plans
+sk,sk-032,Using the Library (Physical),Virtual visits
+sk,sk-033,Using the Library (Physical),"Visitor information, including parking and directions"
+sk,sk-034,Using the Library (Physical),Accessibility and information for patrons with special needs
+sk,sk-035,Using the Library (Physical),Multimedia collections and playback equipment
+sk,sk-036,Using the Library (Physical),Multimedia editing and Collaboratory technology resources
+sk,sk-037,Using the Library (Physical),Becoming a borrower
+sk,sk-038,Using the Library (Physical),Borrowing books and journals
+sk,sk-039,Using the Library (Physical),Finding books: Library of Congress call numbers and collection locations
+sk,sk-040,Using the Library (Physical),Borrowing equipment
+sk,sk-041,Using the Library (Physical),Silent study space
+sk,sk-042,Using the Library (Physical),Group study space
+sk,sk-043,Using the Library (Physical),Writing Centre
+sk,sk-044,Using the Library (Physical),ITSS Help Desk
+sk,sk-045,Using the Library (Physical),Central printing
+sk,sk-046,Using the Library (Physical),Wireless access
+sk,sk-047,Using the Library (Physical),Lost and Found
+sk,sk-048,About the Library,Library Council
+sk,sk-049,About the Library,Strategic plan
+sk,sk-050,About the Library,Library history and mission
+sk,sk-051,About the Library,Organizational chart
+sk,sk-052,About the Library,"Special projects (for example, LMMI)"
+sk,sk-053,About the Library,Policies
+sk,sk-054,About the Library,Donate to the library
+sk,sk-055,About the Library,Library staff
+sk,sk-056,About the Library,Site map
+sk,sk-057,News and Events,Free trials
+sk,sk-058,News and Events,Lectures

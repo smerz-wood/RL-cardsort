@@ -1,469 +1,293 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Card Sorting</title>
-    <style>
-      /* Reset */
-      body, html {
-        margin: 0;
-        padding: 0;
-        font-family: sans-serif;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      /* Layout */
-      .main-layout {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-rows: minmax(60px, min-content) 1fr;
-        gap: 10px 10px;
-        grid-template-areas:
-          "top top"
-          "left right";
-        margin: 10px;
-      }
-      .toolbar {
-        grid-area: top;
-      }
-      .uncategorized-cards {
-        position: relative;
-        grid-area: left;
-      }
-      .categories {
-        position: relative;
-        grid-area: right;
-      }
-      /* Muuri functional */
-      .grid {
-        position: relative;
-      }
-      .item {
-        display: block;
-        position: absolute;
-      }
-      .item.muuri-item-dragging {
-        z-index: 3;
-      }
-      .item.muuri-item-releasing {
-        z-index: 2;
-      }
-      .item.muuri-item-hidden {
-        z-index: 0;
-      }
-      .item-content {
-        position: relative;
-        width: 100%;
-        height: 100%;
-      }
-      /* Toolbar */
-      .toolbar {
-        display: flex;
-        padding: 5px;
-        align-items: center;
-        justify-content: space-around;
-      }
-      .toolbar button {
-        font-size: 24px;
-        cursor: pointer;
-        margin: 5px;
-      }
-      /* Uncategorized cards */
-      .uncategorized-cards {
-        border-radius: 5px;
-        width: 200px;
-        max-width: calc(50vw - 35px);
-      }
-      .uncategorized-cards .grid {
-        min-height: 100%;
-      }
-      .uncategorized-cards .item {
-        width: 100%;
-      }
-      .card {
-        width: 190px;
-        max-width: calc(50vw - 45px);
-        margin: 5px;
-        padding: 5px 7px;
-        border-radius: 3px;
-        font-size: 18px;
-        background: #ee6;
-        box-shadow: 0 2px 2px rgba(172, 121, 0, 0.58);
-        cursor: grab;
-      }
-      .card .card-image {
-        width: 100%;
-        border-radius: 4px;
-      }
-      .card .card-image-text:first-child {
-        display: inline-block;
-        margin-bottom: 4px;
-      }
-      .muuri-item-placeholder .card {
-        pointer-events: none;
-        background: transparent;
-        border: 2px dashed #bbb;
-        color: #999;
-        box-shadow: none;
-        border-radius: 7px;
-      }
-      .muuri-item-placeholder .card .card-image {
-        filter: grayscale(1);
-        opacity: .3;
-      }
-      /* Categories */
-      .category {
-        margin: 5px 15px 30px 5px;
-        padding: calc(5px + 5px);
-        background: #fff;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
-      }
-      .category .title {
-        width: 100%;
-        max-width: 200px;
-        padding: 7px 5px;
-        margin-bottom: 10px;
-        border: 0;
-        border-bottom: 1px solid #bbf;
-        font-size: 20px;
-        color: inherit;
-      }
-      .category-cards .grid {
-        min-height: 100px;
-      }
-      .category-cards .item {
-        width: 100%;
-      }
-      .category-controls {
-        margin-bottom: 5px;
-      }
-      .category-drag-handle {
-        width: 100%;
-        height: 16px;
-        background: radial-gradient(#ddd 35%, transparent 36%) 0 0;
-        background-color: #fff;
-        background-size: 8px 8px;
-        cursor: grab;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="main-layout">
-      <div class="toolbar">
-        <button class="btn-create-category">Create a new category</button>
-        <button class="btn-share-result">Share result</button>
-        <button class="btn-export-result">Export result</button>
-      </div>
-      <div class="uncategorized-cards">
-        <div class="grid"></div>
-      </div>
-      <div class="categories">
-        <div class="grid"></div>
-      </div>
-    </div>
-    <template class="card-template">
-      <div class="item">
-        <div class="item-content">
-          <div class="card"></div>
-        </div>
-      </div>
-    </template>
-    <template class="category-template">
-      <div class="item">
-        <div class="item-content">
-          <div class="category">
-            <div class="category-controls">
-              <div class="category-drag-handle"></div>
-            </div>
-            <input class="title" placeholder="Type a name" />
-            <div class="category-cards">
-              <div class="grid"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-    <script src="muuri-0.9.5.min.js"></script>
-    <script src="pako-2.0.4.min.js"></script>
-    <script src="common-scripts.js"></script>
-    <script>
-      let data = {};
-      const settings = Object.assign({}, settingsDefaults);
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Card Sorting</title>
+  <style>
+    :root { --ink:#17202a; --muted:#5d6d7e; --line:#d5d8dc; --brand:#174a7e; --yellow:#fff28a; --danger:#9b1c1c; }
+    * { box-sizing:border-box; }
+    body, html { margin:0; padding:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); background:#f7f8fa; }
+    .toolbar { position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; gap:.55rem; align-items:center; padding:.7rem; background:#fff; border-bottom:1px solid var(--line); box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .context { flex:1 1 270px; }
+    .context h1 { margin:0; font-size:1.18rem; }
+    .context div { color:var(--muted); font-size:.9rem; }
+    .toolbar label { font-weight:700; }
+    .toolbar input { width:9rem; padding:.45rem; font:inherit; }
+    button, .back-link { padding:.5rem .65rem; border:1px solid var(--brand); border-radius:.35rem; background:#fff; color:var(--brand); font:inherit; font-weight:700; cursor:pointer; text-decoration:none; }
+    button.primary { background:var(--brand); color:#fff; }
+    button.danger { color:var(--danger); border-color:var(--danger); }
+    .save-status { min-width:10rem; font-weight:750; }
+    .save-status.dirty { color:#9b5b00; }
+    .save-status.saved { color:#176b36; }
+    .instructions { margin:.75rem; padding:.75rem 1rem; background:#eef5fb; border-left:5px solid var(--brand); }
+    .main-layout { display:grid; grid-template-columns:220px minmax(0,1fr); gap:12px; margin:12px; align-items:start; }
+    .uncategorized-panel { position:sticky; top:112px; max-height:calc(100vh - 130px); overflow:auto; border:1px solid #d5bd35; background:#fffde7; border-radius:.4rem; }
+    .panel-heading { margin:0; padding:.7rem; font-size:1rem; background:#fff7b7; border-bottom:1px solid #d5bd35; }
+    .grid { position:relative; min-height:80px; }
+    .item { display:block; position:absolute; }
+    .item.muuri-item-dragging { z-index:10; }
+    .item.muuri-item-releasing { z-index:8; }
+    .item-content { position:relative; width:100%; height:100%; }
+    .uncategorized-grid .item { width:100%; }
+    .card { width:calc(100% - 10px); margin:5px; padding:.55rem .65rem; border-radius:.35rem; background:var(--yellow); box-shadow:0 2px 3px rgba(122,91,0,.35); cursor:grab; line-height:1.25; }
+    .categories-grid > .item { width:min(330px,100%); }
+    .category { margin:0 12px 18px 0; padding:.7rem; background:#fff; border:1px solid var(--line); border-radius:.45rem; box-shadow:0 3px 10px rgba(0,0,0,.07); }
+    .category-controls { display:flex; gap:.4rem; align-items:center; margin-bottom:.5rem; }
+    .category-drag-handle { flex:1; height:18px; background:radial-gradient(#aeb6bf 35%,transparent 36%) 0 0; background-size:8px 8px; cursor:grab; }
+    .remove-category { padding:.2rem .4rem; color:var(--danger); border-color:var(--danger); }
+    .category-title { width:100%; padding:.55rem; margin-bottom:.5rem; border:0; border-bottom:2px solid #8daac6; font:inherit; font-weight:750; }
+    .category-card-grid .item { width:100%; }
+    .category-card-grid { min-height:90px; background:#fafafa; border:1px dashed #ccd1d1; }
+    @media (max-width:760px) {
+      .main-layout { grid-template-columns:145px minmax(0,1fr); margin:8px; }
+      .uncategorized-panel { top:175px; }
+      .card { font-size:.9rem; }
+      .categories-grid > .item { width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="context"><h1 class="deck-title">Card sorting</h1><div class="deck-meta"></div></div>
+    <label>Participant <input class="participant-code" maxlength="32" autocomplete="off"></label>
+    <button class="add-category">Add category</button>
+    <button class="save primary">Save draft on this device</button>
+    <button class="export">Download completed CSV</button>
+    <a class="back-link" href="index.html">Back</a>
+    <span class="save-status" aria-live="polite"></span>
+  </div>
+  <div class="instructions">Create categories, give each one a meaningful name, and drag the cards into them. You may reorder categories and cards. Exporting saves the draft first.</div>
+  <main class="main-layout">
+    <aside class="uncategorized-panel">
+      <h2 class="panel-heading">Uncategorized cards (<span class="uncategorized-count">0</span>)</h2>
+      <div class="grid uncategorized-grid"></div>
+    </aside>
+    <section class="categories-panel" aria-label="Participant-created categories">
+      <div class="grid categories-grid"></div>
+    </section>
+  </main>
 
-      /* Card sorting */
-      const buttonCreateCategory = document.querySelector('.btn-create-category');
-      const buttonShareResult = document.querySelector('.btn-share-result');
-      const buttonExportResult = document.querySelector('.btn-export-result');
-      const cardTemplate = document.querySelector('.card-template');
-      const categoryTemplate = document.querySelector('.category-template');
-      const cardImageRegex = /\s*image\s*:\s*((?:https?|data):\S+)/i;
-      const uncategorizedCardsGrid = new Muuri('.uncategorized-cards .grid', {
-        dragEnabled: true,
-        dragSort: () => cardGrids,
-        dragPlaceholder: {
-          enabled: true,
-          createElement: (item) => item.getElement().cloneNode(true),
-        },
-        dragAutoScroll: {
-          targets: [window],
-          sortDuringScroll: false,
+  <template class="card-template">
+    <div class="item"><div class="item-content"><div class="card"></div></div></div>
+  </template>
+  <template class="category-template">
+    <div class="item"><div class="item-content"><div class="category">
+      <div class="category-controls"><div class="category-drag-handle" title="Drag to reorder category"></div><button class="remove-category" title="Remove this empty category">Remove</button></div>
+      <input class="category-title" maxlength="120" placeholder="Name this category">
+      <div class="grid category-card-grid"></div>
+    </div></div></div>
+  </template>
+
+  <script src="muuri-0.9.5.min.js"></script>
+  <script src="decks.js"></script>
+  <script src="storage.js"></script>
+  <script src="csv-utils.js"></script>
+  <script>
+    'use strict';
+    const params = new URLSearchParams(window.location.search);
+    const deckId = params.get('deck');
+    const deck = CARD_DECKS[deckId];
+    if (!deck) window.location.replace('index.html');
+
+    let draft = deck ? CardSortStorage.loadDraft(deckId) : null;
+    if (deck && !draft) {
+      alert('No local draft exists for this deck. Start from the home page.');
+      window.location.replace('index.html');
+    }
+
+    const deckTitle = document.querySelector('.deck-title');
+    const deckMeta = document.querySelector('.deck-meta');
+    const participantInput = document.querySelector('.participant-code');
+    const statusElement = document.querySelector('.save-status');
+    const countElement = document.querySelector('.uncategorized-count');
+    const addCategoryButton = document.querySelector('.add-category');
+    const saveButton = document.querySelector('.save');
+    const exportButton = document.querySelector('.export');
+    const cardTemplate = document.querySelector('.card-template');
+    const categoryTemplate = document.querySelector('.category-template');
+    const cardGrids = [];
+    let dirty = false;
+
+    const uncategorizedGrid = new Muuri('.uncategorized-grid', {
+      dragEnabled:true,
+      dragSort:() => cardGrids,
+      dragPlaceholder:{enabled:true, createElement:item => item.getElement().cloneNode(true)},
+      dragAutoScroll:{targets:[window], sortDuringScroll:false},
+    });
+    cardGrids.push(uncategorizedGrid);
+
+    const categoriesGrid = new Muuri('.categories-grid', {
+      dragEnabled:true,
+      dragSort:true,
+      dragHandle:'.category-drag-handle',
+      layoutOnResize:false,
+    }).on('layoutEnd', () => categoriesGrid.synchronize());
+
+    initialize();
+
+    function initialize() {
+      deckTitle.textContent = deck.title;
+      deckMeta.textContent = `${deck.cards.length} cards · participant-created categories`;
+      participantInput.value = draft.participantCode || '';
+      for (const cardId of draft.result.uncategorized) createCard(cardId, uncategorizedGrid);
+      for (const category of draft.result.categories) createCategory(category);
+      if (!draft.result.categories.length) for (let index = 0; index < 3; index += 1) createCategory();
+      uncategorizedGrid.on('dragEnd', handleChangedLayout);
+      addCategoryButton.addEventListener('click', () => { createCategory(); markDirty(); });
+      saveButton.addEventListener('click', saveDraft);
+      exportButton.addEventListener('click', exportCsv);
+      participantInput.addEventListener('input', markDirty);
+      window.addEventListener('beforeunload', event => {
+        if (!dirty) return;
+        event.preventDefault();
+        event.returnValue = '';
+      });
+      setSaved(`Loaded saved draft from ${new Date(draft.updatedAt).toLocaleString()}`);
+      refreshLayouts();
+    }
+
+    function createCard(cardId, targetGrid) {
+      const card = getCardById(deckId, cardId);
+      if (!card) return;
+      const item = document.importNode(cardTemplate.content.firstElementChild, true);
+      const cardElement = item.querySelector('.card');
+      cardElement.textContent = card.text;
+      cardElement.dataset.cardId = card.id;
+      targetGrid.show(targetGrid.add([item], {active:false}), {onFinish:refreshLayouts});
+    }
+
+    function createCategory(categoryData = null) {
+      const item = document.importNode(categoryTemplate.content.firstElementChild, true);
+      const categoryElement = item.querySelector('.category');
+      const titleInput = item.querySelector('.category-title');
+      const removeButton = item.querySelector('.remove-category');
+      const categoryId = categoryData?.id || CardSortStorage.makeId('category');
+      categoryElement.dataset.categoryId = categoryId;
+      titleInput.value = categoryData?.name || '';
+      titleInput.addEventListener('input', markDirty);
+      removeButton.addEventListener('click', () => removeEmptyCategory(item));
+
+      categoriesGrid.show(categoriesGrid.add([item], {active:false}), {
+        onFinish:() => {
+          const innerGrid = new Muuri(item.querySelector('.category-card-grid'), {
+            dragEnabled:true,
+            dragSort:() => cardGrids,
+            dragPlaceholder:{enabled:true, createElement:cardItem => cardItem.getElement().cloneNode(true)},
+            dragContainer:document.body,
+            dragAutoScroll:{targets:[window], sortDuringScroll:false},
+          });
+          categoryElement._cardGrid = innerGrid;
+          innerGrid.on('dragEnd', handleChangedLayout);
+          innerGrid.on('dragReleaseEnd', () => { innerGrid.synchronize(); handleChangedLayout(); });
+          cardGrids.push(innerGrid);
+          for (const cardId of categoryData?.cards || []) createCard(cardId, innerGrid);
+          refreshLayouts();
         },
       });
-      const categoriesGrid = new Muuri('.categories .grid', {
-        dragEnabled: true,
-        dragSort: true,
-        dragHandle: '.category-drag-handle',
-        layoutOnResize: false,
-      }).on('layoutEnd', () => categoriesGrid.synchronize());
-      const cardGrids = [uncategorizedCardsGrid];
+    }
 
-      const debouncedUpdateData = debounce(updateData, 500);
-      initialize();
+    function removeEmptyCategory(item) {
+      const categoryElement = item.querySelector('.category');
+      const innerGrid = categoryElement._cardGrid;
+      if (innerGrid && innerGrid.getItems().length) {
+        alert('Move the cards out of this category before removing it.');
+        return;
+      }
+      if (!confirm('Remove this empty category?')) return;
+      const index = cardGrids.indexOf(innerGrid);
+      if (index >= 0) cardGrids.splice(index, 1);
+      if (innerGrid) innerGrid.destroy();
+      const categoryItem = categoriesGrid.getItem(item);
+      if (categoryItem) categoriesGrid.remove([categoryItem], {removeElements:true});
+      markDirty();
+      refreshLayouts();
+    }
 
-      async function initialize() {
-        if ( ! window.location.hash) {
-          if (window.location.search) {
-            data = loadFromQueryParameters();
-          }
-          else {
-            window.location.href = 'index.html';
-            return;
-          }
-        }
-        else {
-          data = await loadFromString(window.location.hash.split('#').pop());
-        }
-        const cardTexts = data[uncategorizedKey];
-        Object.assign(settings, loadSettings(data));
-        if (settings.allowCategoryEditing === false) {
-          buttonCreateCategory.style.display = 'none';
-          categoryTemplate.content.querySelector('.title').disabled = true;
-          categoryTemplate.content.querySelector('.title').removeAttribute('placeholder');
-        }
-        buttonCreateCategory.addEventListener('click', () => createCategory());
-        if (settings.isRandomized) {
-          cardTexts.sort(() => Math.random() - 0.5);
-        }
-        for (const text of cardTexts) {
-          createCard(text);
-        }
-        const categories = Object.keys(data).filter(categoryName => !reservedKeys.includes(categoryName));
-        if (categories.length > 0) {
-          for (categoryName of categories) {
-            createCategory(categoryName);
-          }
-        }
-        else {
-          createCategory();
-          createCategory();
-          createCategory();
-        }
-        uncategorizedCardsGrid.on('dragEnd', function handleDragEnd(data) {
-          debouncedUpdateData();
-          categoriesGrid.refreshItems().layout();
-        });
-        buttonShareResult.addEventListener('click', shareResult);
-        buttonExportResult.addEventListener('click', exportResult);
-        // Fix for window resize caused by virtual keyboard
-        // Muuri layout is deferred until input loses focus
-        let isDeferredResize = false;
-        window.addEventListener('resize', debounce(function handleWindowResize() {
-          if (document.activeElement.tagName.toLowerCase() === 'input') {
-            isDeferredResize = true;
-            return;
-          }
-          categoriesGrid.refreshItems().layout();
-        }, Muuri.defaultOptions.layoutOnResize));
-        document.addEventListener('focusout', function handleInputDefocus() {
-          if ( ! isDeferredResize) {
-            return;
-          }
-          categoriesGrid.refreshItems().layout();
-          isDeferredResize = false;
+    function handleChangedLayout() {
+      markDirty();
+      refreshLayouts();
+    }
+
+    function refreshLayouts() {
+      countElement.textContent = String(uncategorizedGrid.getItems().length);
+      categoriesGrid.refreshItems().layout();
+      for (const grid of cardGrids) grid.refreshItems().layout();
+    }
+
+    function uniqueCategoryName(rawName, usedNames, untitledCounter) {
+      let base = rawName.trim();
+      if (!base) base = `Untitled ${untitledCounter}`;
+      let candidate = base;
+      let suffix = 1;
+      while (usedNames.has(candidate.toLocaleLowerCase())) {
+        suffix += 1;
+        candidate = `${base} (${suffix})`;
+      }
+      usedNames.add(candidate.toLocaleLowerCase());
+      return candidate;
+    }
+
+    function captureDraft() {
+      categoriesGrid.synchronize();
+      uncategorizedGrid.synchronize();
+      const usedNames = new Set();
+      let untitledCounter = 0;
+      const categories = [];
+      for (const categoryItem of categoriesGrid.getItems()) {
+        const categoryElement = categoryItem.getElement().querySelector('.category');
+        const input = categoryElement.querySelector('.category-title');
+        if (!input.value.trim()) untitledCounter += 1;
+        const name = uniqueCategoryName(input.value, usedNames, untitledCounter || 1);
+        input.value = name;
+        const innerGrid = categoryElement._cardGrid;
+        innerGrid.synchronize();
+        categories.push({
+          id: categoryElement.dataset.categoryId,
+          name,
+          cards: innerGrid.getItems().map(item => item.getElement().querySelector('.card').dataset.cardId),
         });
       }
+      draft.participantCode = participantInput.value.trim().slice(0, 32);
+      draft.result = {
+        categories,
+        uncategorized: uncategorizedGrid.getItems().map(item => item.getElement().querySelector('.card').dataset.cardId),
+      };
+      return draft;
+    }
 
-      function createCard(text, categoryGrid) {
-        const targetGrid = categoryGrid || uncategorizedCardsGrid;
-        const itemElement = document.importNode(cardTemplate.content.children[0], true);
-        const cardElement = itemElement.querySelector('.card');
-        const hasImage = text.match(cardImageRegex);
-        if (hasImage) {
-          const [textBefore, imageUrl, textAfter] = text.split(cardImageRegex);
-          const cardChildElements = [];
-          if (textBefore.trim()) {
-            const span = document.createElement('span');
-            span.className = 'card-image-text';
-            span.appendChild(document.createTextNode(textBefore));
-            cardChildElements.push(span);
-          }
-          const imageElement = document.createElement('img');
-          imageElement.className = 'card-image';
-          imageElement.onload = () => targetGrid.refreshItems().layout();
-          imageElement.src = imageUrl;
-          cardChildElements.push(imageElement);
-          if (textAfter.trim()) {
-            const span = document.createElement('span');
-            span.className = 'card-image-text';
-            span.appendChild(document.createTextNode(textAfter));
-            cardChildElements.push(span);
-          }
-          cardElement.replaceChildren(...cardChildElements);
-        }
-        else {
-          cardElement.textContent = text;
-        }
-        cardElement.setAttribute('data-text', text);
-        targetGrid.show(
-          targetGrid.add([itemElement], {
-            active: false,
-          }),
-          {
-            onFinish: () => {
-              categoriesGrid.refreshItems().layout();
-            },
-          },
-        );
+    function saveDraft() {
+      if (!participantInput.value.trim()) {
+        alert('Enter a participant code or initials before saving.');
+        participantInput.focus();
+        return null;
       }
+      captureDraft();
+      draft = CardSortStorage.saveDraft(deckId, draft);
+      setSaved(`Saved ${new Date(draft.updatedAt).toLocaleTimeString()}`);
+      return draft;
+    }
 
-      function createCategory(name, cards) {
-        const itemElement = document.importNode(categoryTemplate.content.children[0], true);
-        const titleInput = itemElement.querySelector('.title');
-        titleInput.addEventListener('input', function handleInput() {
-          debouncedUpdateData();
-        });
-        if (name) {
-          titleInput.value = name;
-        }
-        else if (settings.allowCategoryEditing === false) {
-          titleInput.style.opacity = '0';
-          titleInput.style.height = '0';
-          titleInput.style.margin = '0';
-          titleInput.style.padding = '0';
-        }
-        categoriesGrid.show(
-          categoriesGrid.add([itemElement], {
-            active: false,
-            index: !!name ? -1 : 0,
-          }),
-          {
-            onFinish: () => {
-              const categoryGrid = new Muuri(itemElement.querySelector('.grid'), {
-                dragEnabled: true,
-                dragSort: () => cardGrids,
-                dragPlaceholder: {
-                  enabled: true,
-                  createElement: (item) => item.getElement().cloneNode(true),
-                },
-                dragContainer: document.body,
-                dragAutoScroll: {
-                  targets: [window],
-                  sortDuringScroll: false,
-                },
-              });
-              categoryGrid.on('dragEnd', function handleDragEnd(data) {
-                categoriesGrid.refreshItems().layout();
-              });
-              categoryGrid.on('dragReleaseEnd', function handleDragReleaseEnd(data) {
-                categoryGrid.synchronize();
-                debouncedUpdateData();
-              });
-              cardGrids.push(categoryGrid);
-              const cardTexts = data[name] || [];
-              for (const text of cardTexts) {
-                createCard(text, categoryGrid);
-              }
-            },
-          }
-        );
-      }
+    function exportCsv() {
+      const saved = saveDraft();
+      if (!saved) return;
+      const remaining = saved.result.uncategorized.length;
+      if (remaining && !confirm(`${remaining} card${remaining === 1 ? '' : 's'} remain uncategorized. Download the CSV anyway?`)) return;
+      CardSortCsv.downloadDraft(deck, saved);
+      setSaved('Saved and downloaded CSV');
+    }
 
-      function updateData() {
-        let untitledCounter = 0;
-        data = {};
-        for (const categoryElement of document.querySelectorAll('.category')) {
-          let categoryName = categoryElement.querySelector('.title').value;
-          if ( ! categoryName) {
-            untitledCounter += 1;
-            categoryName = `(Untitled ${untitledCounter})`;
-          }
-          if (categoryName in data) {
-            categoryName = getUniqueCategoryName(categoryName, data);
-          }
-          data[categoryName] = [];
-          for (const cardElement of categoryElement.querySelectorAll('.card')) {
-            data[categoryName].push(cardElement.getAttribute('data-text'));
-          }
-        }
-        data[uncategorizedKey] = [];
-        for (const cardElement of document.querySelectorAll('.uncategorized-cards .card')) {
-          data[uncategorizedKey].push(cardElement.getAttribute('data-text'));
-        }
-        data[settingsFlagsKey] = saveSettings(settings);
-      }
+    function markDirty() {
+      dirty = true;
+      statusElement.textContent = 'Unsaved changes';
+      statusElement.className = 'save-status dirty';
+    }
 
-      function getUniqueCategoryName(originalName, data) {
-        let candidateName = originalName
-        let counter = 1;
-        while (candidateName in data) {
-          counter += 1;
-          candidateName = `${originalName} (${counter})`;
-        }
-        return candidateName;
-      }
-
-      async function shareResult() {
-        updateData();
-        const dataString = await saveToString(data);
-        const baseUrl = window.location.href.replace(regexRemoveBasenameFromUrl, '/');
-        const url = baseUrl + 'card-sort.html#' + dataString;
-        if (navigator.share) {
-          navigator.share({
-            title: '',
-            text: '',
-            url: url,
-          });
-        }
-        else if (navigator.clipboard) {
-          navigator.clipboard.writeText(url);
-          const originalText = buttonShareResult.textContent;
-          buttonShareResult.textContent = 'Link copied to clipboard';
-          clearTimeout(buttonShareResult._textTimeout);
-          buttonShareResult._textTimeout = setTimeout(() => {
-            buttonShareResult.textContent = originalText;
-          }, 5000);
-        }
-        else {
-          window.location.href = url;
-          alert('Your browser does not support sharing. Please copy from the address bar instead.');
-        }
-      }
-
-      function exportResult() {
-        updateData();
-        const cleanedData = {};
-        for ([key, value] of Object.entries(data)) {
-          if (reservedKeys.includes(key)) {
-            continue;
-          }
-          cleanedData[key] = value;
-        }
-        const serializedData = JSON.stringify(cleanedData, null, 2);
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(serializedData);
-          const originalText = buttonExportResult.textContent;
-          buttonExportResult.textContent = 'Data copied to clipboard';
-          clearTimeout(buttonExportResult._textTimeout);
-          buttonExportResult._textTimeout = setTimeout(() => {
-            buttonExportResult.textContent = originalText;
-          }, 5000);
-        }
-        else {
-          prompt('Your browser does not support clipboard. You may try copying the content from below.', serializedData);
-        }
-      }
-    </script>
-  </body>
+    function setSaved(message) {
+      dirty = false;
+      statusElement.textContent = message;
+      statusElement.className = 'save-status saved';
+    }
+  </script>
+</body>
 </html>

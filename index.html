@@ -27,7 +27,8 @@
       font-size: 15px;
     }
 
-    button { font: inherit; }
+    button,
+    .button-link { font: inherit; }
 
     .page {
       width: min(760px, calc(100% - 32px));
@@ -88,7 +89,11 @@
       gap: 8px;
     }
 
-    button {
+    button,
+    .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       min-height: 36px;
       padding: 0 12px;
       border: 1px solid var(--border-strong);
@@ -96,22 +101,27 @@
       background: var(--surface);
       color: var(--text);
       cursor: pointer;
+      text-decoration: none;
     }
 
-    button:hover { border-color: var(--text); }
+    button:hover,
+    .button-link:hover { border-color: var(--text); }
 
-    button:focus-visible {
+    button:focus-visible,
+    .button-link:focus-visible {
       outline: 2px solid var(--text);
       outline-offset: 2px;
     }
 
-    button.primary {
+    button.primary,
+    .button-link.primary {
       border-color: var(--text);
       background: var(--text);
       color: #fff;
     }
 
-    button.reset { color: var(--danger); }
+    button.reset,
+    .button-link.reset { color: var(--danger); }
 
     .empty {
       padding: 24px 0;
@@ -150,7 +160,8 @@
 
     const deckList = document.querySelector('.deck-list');
     const deckCount = document.querySelector('.deck-count');
-    const entries = Object.entries(CARD_DECKS || {});
+    const decks = typeof CARD_DECKS === 'object' && CARD_DECKS ? CARD_DECKS : {};
+    const entries = Object.entries(decks);
 
     deckCount.textContent = `${entries.length} deck${entries.length === 1 ? '' : 's'}`;
 
@@ -162,7 +173,13 @@
     }
 
     for (const [deckId, deck] of entries) {
-      const savedDraft = CardSortStorage.loadDraft(deckId);
+      let savedDraft = null;
+      try {
+        savedDraft = CardSortStorage.loadDraft(deckId);
+      } catch (error) {
+        console.warn('Could not read the saved draft.', error);
+      }
+
       const row = document.createElement('li');
       row.className = 'deck-row';
 
@@ -178,46 +195,27 @@
       const actions = document.createElement('div');
       actions.className = 'deck-actions';
 
-      const openButton = document.createElement('button');
-      openButton.type = 'button';
-      openButton.className = 'primary';
-      openButton.textContent = savedDraft ? 'Continue' : 'Start';
-      openButton.addEventListener('click', () => openDeck(deckId, deck, false));
-      actions.append(openButton);
+      const openLink = document.createElement('a');
+      openLink.className = 'button-link primary';
+      openLink.textContent = savedDraft ? 'Continue' : 'Start';
+      openLink.href = `cardsort.html?deck=${encodeURIComponent(deckId)}`;
+      actions.append(openLink);
 
       if (savedDraft) {
-        const resetButton = document.createElement('button');
-        resetButton.type = 'button';
-        resetButton.className = 'reset';
-        resetButton.textContent = 'Restart';
-        resetButton.addEventListener('click', () => openDeck(deckId, deck, true));
-        actions.append(resetButton);
+        const restartLink = document.createElement('a');
+        restartLink.className = 'button-link reset';
+        restartLink.textContent = 'Restart';
+        restartLink.href = `cardsort.html?deck=${encodeURIComponent(deckId)}&restart=1`;
+        restartLink.addEventListener('click', event => {
+          if (!confirm('Restart this card sort? The saved draft will be replaced when you save.')) {
+            event.preventDefault();
+          }
+        });
+        actions.append(restartLink);
       }
 
       row.append(details, actions);
       deckList.append(row);
-    }
-
-    function openDeck(deckId, deck, restart) {
-      let draft = CardSortStorage.loadDraft(deckId);
-
-      if (restart) {
-        if (!confirm('Restart this card sort? The saved draft on this device will be replaced.')) return;
-        draft = null;
-      }
-
-      if (!draft) {
-        draft = {
-          participantCode: '',
-          result: {
-            categories: [],
-            uncategorized: deck.cards.map(card => card.id),
-          },
-        };
-        CardSortStorage.saveDraft(deckId, draft);
-      }
-
-      window.location.href = `cardsort.html?deck=${encodeURIComponent(deckId)}`;
     }
   </script>
 </body>

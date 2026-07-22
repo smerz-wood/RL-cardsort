@@ -27,8 +27,7 @@
       font-size: 15px;
     }
 
-    button,
-    .button-link { font: inherit; }
+    button { font: inherit; }
 
     .page {
       width: min(760px, calc(100% - 32px));
@@ -89,11 +88,7 @@
       gap: 8px;
     }
 
-    button,
-    .button-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    button {
       min-height: 36px;
       padding: 0 12px;
       border: 1px solid var(--border-strong);
@@ -101,31 +96,31 @@
       background: var(--surface);
       color: var(--text);
       cursor: pointer;
-      text-decoration: none;
     }
 
-    button:hover,
-    .button-link:hover { border-color: var(--text); }
+    button:hover { border-color: var(--text); }
 
-    button:focus-visible,
-    .button-link:focus-visible {
+    button:focus-visible {
       outline: 2px solid var(--text);
       outline-offset: 2px;
     }
 
-    button.primary,
-    .button-link.primary {
+    button.primary {
       border-color: var(--text);
       background: var(--text);
       color: #fff;
     }
 
-    button.reset,
-    .button-link.reset { color: var(--danger); }
+    button.reset { color: var(--danger); }
 
-    .empty {
+    .empty,
+    .error {
       padding: 24px 0;
       color: var(--muted);
+    }
+
+    .error {
+      color: var(--danger);
     }
 
     @media (max-width: 560px) {
@@ -147,7 +142,7 @@
   <main class="page">
     <header>
       <h1>Card sorting</h1>
-      <span class="deck-count"></span>
+      <span class="deck-count" aria-live="polite"></span>
     </header>
 
     <ul class="deck-list" aria-label="Available card decks"></ul>
@@ -158,65 +153,131 @@
   <script>
     'use strict';
 
-    const deckList = document.querySelector('.deck-list');
-    const deckCount = document.querySelector('.deck-count');
-    const decks = typeof CARD_DECKS === 'object' && CARD_DECKS ? CARD_DECKS : {};
-    const entries = Object.entries(decks);
+    (() => {
+      const deckList = document.querySelector('.deck-list');
+      const deckCount = document.querySelector('.deck-count');
 
-    deckCount.textContent = `${entries.length} deck${entries.length === 1 ? '' : 's'}`;
-
-    if (!entries.length) {
-      const empty = document.createElement('li');
-      empty.className = 'empty';
-      empty.textContent = 'No card decks are available.';
-      deckList.append(empty);
-    }
-
-    for (const [deckId, deck] of entries) {
-      let savedDraft = null;
-      try {
-        savedDraft = CardSortStorage.loadDraft(deckId);
-      } catch (error) {
-        console.warn('Could not read the saved draft.', error);
+      const missingDependencies = [];
+      if (typeof CARD_DECKS === 'undefined' || !CARD_DECKS || typeof CARD_DECKS !== 'object') {
+        missingDependencies.push('decks.js');
+      }
+      if (typeof CardSortStorage === 'undefined' || !CardSortStorage) {
+        missingDependencies.push('storage.js');
       }
 
-      const row = document.createElement('li');
-      row.className = 'deck-row';
+      if (missingDependencies.length) {
+        showMessage(
+          `Unable to load ${missingDependencies.join(' and ')}. Check that the file names and paths are correct.`,
+          'error'
+        );
+        deckCount.textContent = 'Unavailable';
+        return;
+      }
 
-      const details = document.createElement('div');
-      const title = document.createElement('h2');
-      const meta = document.createElement('div');
-      title.className = 'deck-title';
-      title.textContent = deck.title;
-      meta.className = 'deck-meta';
-      meta.textContent = `${deck.cards.length} card${deck.cards.length === 1 ? '' : 's'}`;
-      details.append(title, meta);
+      const entries = Object.entries(CARD_DECKS).filter(([, deck]) => {
+        return deck && typeof deck === 'object' && Array.isArray(deck.cards);
+      });
 
-      const actions = document.createElement('div');
-      actions.className = 'deck-actions';
+      deckCount.textContent = `${entries.length} deck${entries.length === 1 ? '' : 's'}`;
 
-      const openLink = document.createElement('a');
-      openLink.className = 'button-link primary';
-      openLink.textContent = savedDraft ? 'Continue' : 'Start';
-      openLink.href = `cardsort.html?deck=${encodeURIComponent(deckId)}`;
-      actions.append(openLink);
+      if (!entries.length) {
+        showMessage('No card decks are available.', 'empty');
+        return;
+      }
 
-      if (savedDraft) {
-        const restartLink = document.createElement('a');
-        restartLink.className = 'button-link reset';
-        restartLink.textContent = 'Restart';
-        restartLink.href = `cardsort.html?deck=${encodeURIComponent(deckId)}&restart=1`;
-        restartLink.addEventListener('click', event => {
-          if (!confirm('Restart this card sort? The saved draft will be replaced when you save.')) {
-            event.preventDefault();
+      for (const [deckId, deck] of entries) {
+        renderDeck(deckId, deck);
+      }
+
+      function renderDeck(deckId, deck) {
+        const savedDraft = loadDraft(deckId);
+        const row = document.createElement('li');
+        row.className = 'deck-row';
+
+        const details = document.createElement('div');
+        const title = document.createElement('h2');
+        const meta = document.createElement('div');
+
+        title.className = 'deck-title';
+        title.textContent = deck.title || deckId;
+
+        meta.className = 'deck-meta';
+        meta.textContent = `${deck.cards.length} card${deck.cards.length === 1 ? '' : 's'}`;
+
+        details.append(title, meta);
+
+        const actions = document.createElement('div');
+        actions.className = 'deck-actions';
+
+        const openButton = document.createElement('button');
+        openButton.type = 'button';
+        openButton.className = 'primary';
+        openButton.textContent = savedDraft ? 'Continue' : 'Start';
+        openButton.addEventListener('click', () => openDeck(deckId, deck, false));
+        actions.append(openButton);
+
+        if (savedDraft) {
+          const resetButton = document.createElement('button');
+          resetButton.type = 'button';
+          resetButton.className = 'reset';
+          resetButton.textContent = 'Restart';
+          resetButton.addEventListener('click', () => openDeck(deckId, deck, true));
+          actions.append(resetButton);
+        }
+
+        row.append(details, actions);
+        deckList.append(row);
+      }
+
+      function loadDraft(deckId) {
+        try {
+          return CardSortStorage.loadDraft(deckId);
+        } catch (error) {
+          console.warn(`Could not load the saved draft for ${deckId}.`, error);
+          return null;
+        }
+      }
+
+      function openDeck(deckId, deck, restart) {
+        let draft = loadDraft(deckId);
+
+        if (restart) {
+          const confirmed = window.confirm(
+            'Restart this card sort? The saved draft on this device will be replaced.'
+          );
+          if (!confirmed) return;
+          draft = null;
+        }
+
+        if (!draft) {
+          const newDraft = {
+            participantCode: '',
+            result: {
+              categories: [],
+              uncategorized: deck.cards.map(card => card.id),
+            },
+          };
+
+          try {
+            CardSortStorage.saveDraft(deckId, newDraft);
+          } catch (error) {
+            console.error('Could not create the card-sort draft.', error);
+            window.alert('The draft could not be saved on this device. Check browser storage permissions.');
+            return;
           }
-        });
-        actions.append(restartLink);
+        }
+
+        window.location.assign(`card-sort.html?deck=${encodeURIComponent(deckId)}`);
       }
 
-      row.append(details, actions);
-      deckList.append(row);
-    }
+      function showMessage(message, className) {
+        const item = document.createElement('li');
+        item.className = className;
+        item.textContent = message;
+        if (className === 'error') item.setAttribute('role', 'alert');
+        deckList.append(item);
+      }
+    })();
   </script>
 </body>
 </html>

@@ -1,782 +1,254 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Card Sorting Analysis</title>
-    <style>
-      /* Reset */
-      body, html {
-        margin: 0;
-        padding: 0;
-        font-family: sans-serif;
-        color: #000;
-      }
-      body {
-        padding-bottom: 60vh;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      .results-input-container {
-        padding: 15px;
-      }
-      .results-input-container .title-bar {
-        padding: 0 0 15px 0;
-      }
-      .results-input-container .title-bar h2 {
-        margin: 0;
-      }
-      #results-input {
-        padding: 0.5em;
-        width: 100%;
-        height: 2.5em;
-      }
-      /* Category refinement */
-      .category-refinement {
-        position: relative;
-      }
-      .category-refinement .title-bar {
-        position: sticky;
-        display: flex;
-        align-items: center;
-        top: 0;
-        gap: 15px;
-        padding: 15px;
-        background: #fff;
-      }
-      .category-refinement .title-bar h2 {
-        margin: 0;
-      }
-      .category-refinement .title-bar button,
-      .category-refinement .title-bar input[type="checkbox"],
-      .category-refinement .title-bar label {
-        cursor: pointer;
-      }
-      .category-refinement .title-bar button[disabled] {
-        cursor: not-allowed;
-      }
-      .category-refinement .categories {
-        padding: 15px;
-      }
-      .category-refinement .category {
-        display: grid;
-        grid-template-columns: 200px 1fr;
-        grid-template-rows: min-content 1fr;
-        grid-template-areas:
-          "topleft right"
-          "left right"
-          "bottomleft right";
-        gap: 7px 7px;
-        margin-bottom: 10px;
-        width: 100%;
-        padding: 10px;
-        background: #fff;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
-      }
-      .category-refinement .category-name {
-        grid-area: topleft;
-        white-space: pre-wrap;
-        outline-offset: 3px;
-      }
-      .category-refinement .category-name:hover:not(:focus):not(:active) {
-        outline: 2px solid #ddd;
-      }
-      .category-refinement .category-merge-tool {
-        grid-area: bottomleft;
-      }
-      .category-refinement .merged-categories {
-        grid-area: left;
-      }
-      .category-refinement .category-merge-tool button {
-        --border-lighter: rgba(0,0,0,.15);
-        --border-darker: rgba(0,0,0,.3);
-        background: #fff;
-        border-width: 2px;
-        border-radius: 5px;
-        border-color: var(--border-lighter) var(--border-darker) var(--border-darker) var(--border-lighter);
-        padding: 3px 7px;
-        cursor: pointer;
-      }
-      .category-refinement .category-merge-tool button:active {
-        border-color: var(--border-darker) var(--border-lighter) var(--border-lighter) var(--border-darker);
-      }
-      .category-refinement .category-merge-button-start {
-        opacity: 0;
-      }
-      .category-refinement .category:hover .category-merge-button-start,
-      .category-refinement .category-merge-button-start:focus {
-        opacity: 1;
-      }
-      .category-refinement .categories:not(.is-merge-active) .category-merge-button-end,
-      .category-refinement .categories.is-merge-active .is-merge-source .category-merge-button-end,
-      .category-refinement .categories.is-merge-active .category-merge-button-start,
-      .category-merge-button-cancel {
-        display: none;
-      }
-      .category-refinement .has-merged-categories .category-merge-button-start {
-        visibility: hidden;
-      }
-      .is-merge-active .is-merge-source .category-merge-button-cancel {
-        display: unset;
-      }
-      .category-refinement .category.is-merge-pending .category-merge-tool {
-        display: none;
-      }
-      .category-refinement .category.is-merge-pending {
-        opacity: .3;
-      }
-      .category-refinement .category.is-merge-pending .category-name,
-      .category-refinement .merged-category.is-undo-pending .merged-category-name {
-        text-decoration: line-through;
-      }
-      .category-refinement .merged-category {
-        display: flex;
-        align-items: baseline;
-        font-size: 80%;
-      }
-      .category-refinement .merged-category-name {
-        flex-grow: 1;
-        margin-left: 0.3em;
-      }
-      .category-refinement .merged-category-button-undo {
-        cursor: pointer;
-        filter: grayscale(1);
-      }
-      .category-refinement .category-cards {
-        grid-area: right;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        align-content: flex-start;
-        margin-bottom: -10px;
-      }
-      .category-refinement .card {
-        display: flex;
-        padding: 5px;
-        margin-bottom: 10px;
-        --weight: 0;
-        --more-weight: calc(var(--weight) + 0.3);
-        background-color: rgba(102, 102, 255, var(--weight));
-        border: 1px solid rgba(102, 102, 255, 0);
-        border-color: rgba(102, 102, 255, var(--more-weight));
-        border-radius: 5px;
-        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0);
-        --similarity-highlight: 0 0 0 2px rgba(0, 0, 0, 1);
-        transition: box-shadow .1s ease-in;
-      }
-      .category-refinement .card:not(:last-child) {
-        margin-right: 10px;
-      }
-      .category-refinement .card-text {
-        margin-right: 0.25em;
-        max-width: calc(100vw - 300px);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      /* Association table */
-      .associations {
-        position: relative;
-        padding: 15px;
-      }
-      .associations .title-bar {
-        position: sticky;
-        top: 0;
-        padding: 15px 0;
-        width: fit-content;
-        background: #fff;
-      }
-      .associations .title-bar h2 {
-        margin: 0;
-      }
-      .association-table {
-        border-collapse: collapse;
-        --border-styles: 1px solid #eee;
-      }
-      .association-table tr:first-of-type th:first-of-type {
-        text-align: right;
-        vertical-align: bottom;
-        padding: 15px;
-      }
-      .association-table .associations-button-swap-axes {
-        margin: 15px 0 0 15px;
-      }
-      .association-table th {
-        text-align: inherit;
-        font-weight: inherit;
-        padding: 0;
-      }
-      .association-table td {
-        border: var(--border-styles);
-        padding: 0;
-      }
-      .association-table .x-axis-head-cell {
-        width: 30px;
-        height: 200px;
-        vertical-align: bottom;
-      }
-      .association-table .x-axis-head-text {
-        position: absolute;
-        width: 260px;
-        transform-origin: left bottom;
-        transform: translateX(16px) translateY(-20px) rotate(-45deg);
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-      }
-      .association-table .y-axis-head-text {
-        padding-right: 0.25em;
-        text-align: right;
-        white-space: nowrap;
-        border-bottom: var(--border-styles);
-      }
-      .association-table .card-correlation {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        --light: #fff;
-        --dark: #333;
-        --weight: 0;
-        background-color: rgba(102, 102, 255, var(--weight));
-        width: 28px;
-        height: 28px;
-        overflow: hidden;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="results-input-container">
-      <div class="title-bar">
-        <h2>Data input</h2>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Card-sort CSV analysis</title>
+  <style>
+    :root { --ink:#17202a; --muted:#5d6d7e; --line:#d5d8dc; --brand:#174a7e; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); background:#f7f8fa; }
+    header { background:var(--brand); color:#fff; padding:1.2rem; }
+    header h1 { margin:0 0 .3rem; }
+    main { width:min(1200px,100%); margin:auto; padding:1.2rem; }
+    section { background:#fff; border:1px solid var(--line); padding:1rem; margin-bottom:1rem; overflow:auto; }
+    label { font-weight:700; }
+    input, select, button { font:inherit; padding:.5rem; }
+    button { border:1px solid var(--brand); background:#fff; color:var(--brand); border-radius:.3rem; cursor:pointer; font-weight:700; }
+    .controls { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; }
+    .message { margin-top:.75rem; color:var(--muted); }
+    table { border-collapse:collapse; width:100%; }
+    th, td { border:1px solid #e0e3e5; padding:.45rem; text-align:left; vertical-align:top; }
+    th { background:#eef5fb; }
+    .bar { height:.6rem; background:var(--brand); display:inline-block; margin-right:.4rem; }
+    .muted { color:var(--muted); }
+    .error { color:#9b1c1c; }
+    .pair-list { margin:0; padding-left:1.2rem; }
+    a { color:var(--brand); }
+  </style>
+</head>
+<body>
+  <header><h1>Card-sort CSV analysis</h1><div>Load completed CSV files exported by this project. Analyze SK and SMW as separate decks.</div></header>
+  <main>
+    <section>
+      <h2>1. Load files</h2>
+      <div class="controls">
+        <input id="files" type="file" accept=".csv,text/csv" multiple>
+        <button id="clear">Clear loaded data</button>
+        <a href="index.html">Back to card sort</a>
       </div>
-      <div>
-        <label for="results-input">Paste one or more results below to add them</label>
+      <div class="message" id="message">No files loaded.</div>
+    </section>
+
+    <section>
+      <h2>2. Select deck</h2>
+      <div class="controls">
+        <label for="deck-select">Deck</label>
+        <select id="deck-select" disabled></select>
+        <label><input id="include-uncategorized" type="checkbox"> Include uncategorized cards in participant summaries</label>
       </div>
-      <textarea id="results-input"></textarea>
-    </div>
-    <div class="category-refinement">
-      <style class="similarity-hover-effect-stylesheet"></style>
-      <div class="title-bar">
-        <h2>Category refinement</h2>
-        <button>Auto-merge</button>
-        <button class="button-recalculate" disabled>Apply changes</button>
-        <label for="similarity-hover-effect-toggle">
-          <input type="checkbox" id="similarity-hover-effect-toggle" />
-          Similarity highlight on hover
-        </label>
-      </div>
-      <div class="categories"></div>
-    </div>
-    <div class="associations">
-      <div class="title-bar">
-        <h2>Category&ndash;card table</h2>
-      </div>
-      <table class="association-table"></table>
-    </div>
-    <template class="category-template">
-      <div class="category" spellcheck="false">
-        <div class="category-name"></div>
-        <div class="category-cards"></div>
-        <div class="merged-categories"></div>
-        <div class="category-merge-tool">
-          <button class="category-merge-button-start">Merge this category into...</button>
-          <button class="category-merge-button-end">Merge into here</button>
-          <button class="category-merge-button-cancel">Cancel merge</button>
-        </div>
-      </div>
-    </template>
-    <template class="merged-category-template">
-      <div class="merged-category">
-        <div class="merged-category-button-undo">❌</div>
-        <div class="merged-category-name"></div>
-      </div>
-    </template>
-    <template class="card-template">
-      <div class="card">
-        <div class="card-text"></div>
-        <div class="card-correlation"></div>
-      </div>
-    </template>
-    <script src="pako-2.0.4.min.js"></script>
-    <script src="common-scripts.js"></script>
-    <script>
-      const resultsInput = document.querySelector('#results-input');
-      const mergedCategories = {};
-      const renamedCategories = {};
-      let loadedResults = [];
-      resultsInput.addEventListener('input', handleResultsInput);
-      const jsonSplitRegex = /\}[^{}]*\{/;
+    </section>
 
-      async function handleResultsInput() {
-        const text = resultsInput.value;
-        let results = [];
-        if (text.includes('{')) {
-          try {
-            results = [JSON.parse(text)];
-          }
-          catch(e) {
-            results = text.split(jsonSplitRegex);
-            results[0] = results[0] + '}';
-            for (let i = 1; i < results.length - 1; i++) {
-              results[i] = '{' + results[i] + '}';
-            }
-            results[results.length - 1] = '{' + results[results.length - 1];
-            results = results.map(JSON.parse);
-          }
+    <section>
+      <h2>Imported participants</h2>
+      <table id="participants"><thead><tr><th>File</th><th>Participant</th><th>Exported</th><th>Categories</th><th>Categorized</th><th>Uncategorized</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section>
+      <h2>Category-label frequency</h2>
+      <p class="muted">This counts exact participant-entered labels. Similar labels such as “Research help” and “Help with research” remain separate until you interpret or merge them.</p>
+      <table id="labels"><thead><tr><th>Category label</th><th>Participants using label</th><th>Percentage</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section>
+      <h2>Card-pair similarity</h2>
+      <p class="muted">For each card, this lists the cards most often placed in the same category. Percentages use participants who categorized both cards.</p>
+      <table id="pairs"><thead><tr><th>Card</th><th>Most commonly grouped with</th></tr></thead><tbody></tbody></table>
+    </section>
+  </main>
+
+  <script src="decks.js"></script>
+  <script src="csv-utils.js"></script>
+  <script>
+    'use strict';
+    const filesInput = document.querySelector('#files');
+    const clearButton = document.querySelector('#clear');
+    const message = document.querySelector('#message');
+    const deckSelect = document.querySelector('#deck-select');
+    const includeUncategorized = document.querySelector('#include-uncategorized');
+    const participantBody = document.querySelector('#participants tbody');
+    const labelsBody = document.querySelector('#labels tbody');
+    const pairsBody = document.querySelector('#pairs tbody');
+    let records = [];
+
+    filesInput.addEventListener('change', loadFiles);
+    clearButton.addEventListener('click', clearAll);
+    deckSelect.addEventListener('change', render);
+    includeUncategorized.addEventListener('change', render);
+
+    async function loadFiles() {
+      const errors = [];
+      for (const file of filesInput.files) {
+        try {
+          const rows = CardSortCsv.validateRows(CardSortCsv.parse(await file.text()));
+          const deckId = rows[0].deck_id;
+          if (!CARD_DECKS[deckId]) throw new Error(`Unknown deck_id: ${deckId}`);
+          records.push(buildRecord(file.name, rows));
         }
-        else if (text.includes('http')) {
-          results = text.split('http');
-          results = results.map(result => result.trim());
-          results = results.filter(result => !!result);
-          results = results.map(async result => {
-            const url = 'http' + result;
-            const urlObj = new URL(url);
-            const data = await loadFromString(urlObj.hash.split('#').pop());
-            const keyValuePairs = Object.entries(data).filter(([key, value]) => !reservedKeys.includes(key));
-            result = Object.fromEntries(keyValuePairs);
-            return result;
-          });
-          results = await Promise.all(results);
-        }
-        if (results.length > 0) {
-          resultsInput.value = '';
-          console.log(results);
-          addToLoadedResults(results);
+        catch (error) {
+          errors.push(`${file.name}: ${error.message}`);
         }
       }
+      filesInput.value = '';
+      refreshDeckOptions();
+      message.className = errors.length ? 'message error' : 'message';
+      message.textContent = `${records.length} file(s) loaded.${errors.length ? ' Errors: ' + errors.join(' | ') : ''}`;
+      render();
+    }
 
-      function addToLoadedResults(newResults) {
-        const concatenatedResults = loadedResults.concat(newResults);
-        const seenResultStrings = new Set();
-        const uniqueResults = [];
-        for (const result of concatenatedResults) {
-          const resultAsStr = JSON.stringify(result);
-          if (seenResultStrings.has(resultAsStr)) {
-            continue;
-          }
-          seenResultStrings.add(resultAsStr);
-          uniqueResults.push(result);
-        }
-        loadedResults = uniqueResults;
-        calculateAndRender();
-      }
-
-      function calculateAndRender() {
-        const data = combineResults(loadedResults);
-
-        calculateCategorySimilarities(data);
-        calculateCardSimilarities(data);
-
-        sortCategoriesBySimilarity(data);
-        sortCardsBySimilarity(data);
-
-        renderCategoryRefinement(data);
-        renderAssociationTable(data);
-
-        console.log(data);
-      }
-
-      function combineResults(results) {
-        const data = {
-          categories: [],
-          cards: [],
-          cardCountsByCategory: {},
-          resultCount: results.length,
-        };
-        for (const result of results) {
-          for (let [categoryName, cards] of Object.entries(result)) {
-            if (categoryName in mergedCategories) {
-              categoryName = mergedCategories[categoryName];
-            }
-            if ( ! (categoryName in data.cardCountsByCategory)) {
-              data.cardCountsByCategory[categoryName] = {};
-              data.categories.push({
-                name: categoryName,
-                categorySimilarities: {},
-              });
-            }
-            const cardCountCategory = data.cardCountsByCategory[categoryName];
-            for (const card of cards) {
-              if ( ! (card in cardCountCategory)) {
-                cardCountCategory[card] = 0;
-              }
-              cardCountCategory[card] += 1;
-              let cardObj = data.cards.find(cardObj => cardObj.text == card);
-              if (cardObj === undefined) {
-                cardObj = {
-                  text: card,
-                  categories: [],
-                  cardSimilarities: {},
-                };
-                data.cards.push(cardObj);
-              }
-              cardObj.categories.push(categoryName);
-            }
-          }
-        }
-        return data;
-      }
-
-      function calculateCategorySimilarities(data) {
-        for (const categoryA of data.categories) {
-          const cardsA = Object.keys(data.cardCountsByCategory[categoryA.name]);
-          for (const categoryB of data.categories) {
-            if (categoryB.name in categoryA.categorySimilarities) {
-              continue;
-            }
-            const cardsB = Object.keys(data.cardCountsByCategory[categoryB.name]);
-            let amountOfCardsInBoth = 0;
-            let amountOfCardsInA = cardsA.length;
-            let amountOfCardsInB = cardsB.length;
-            for (const cardA of cardsA) {
-              if (cardsB.includes(cardA)) {
-                amountOfCardsInBoth += 1;
-                amountOfCardsInA -= 1;
-                amountOfCardsInB -= 1;
-              }
-            }
-            const jaccardScore = amountOfCardsInBoth / (amountOfCardsInBoth + amountOfCardsInA + amountOfCardsInB);
-            categoryA.categorySimilarities[categoryB.name] = jaccardScore;
-          }
-        }
-      }
-
-      function calculateCardSimilarities(data) {
-        for (const cardA of data.cards) {
-          for (const cardB of data.cards) {
-            if (cardB.text in cardA.cardSimilarities) {
-              continue;
-            }
-            let amountOfCategoriesContainingBoth = 0;
-            let amountOfCategoriesContainingA = cardA.categories.length;
-            let amountOfCategoriesContainingB = cardB.categories.length;
-            for (const categoryA of cardA.categories) {
-              if (cardB.categories.includes(categoryA)) {
-                amountOfCategoriesContainingBoth += 1;
-                amountOfCategoriesContainingA -= 1;
-                amountOfCategoriesContainingB -= 1;
-              }
-            }
-            const jaccardScore = amountOfCategoriesContainingBoth / (amountOfCategoriesContainingBoth + amountOfCategoriesContainingA + amountOfCategoriesContainingB);
-            cardA.cardSimilarities[cardB.text] = jaccardScore;
-          }
-        }
-      }
-
-      function sortCategoriesBySimilarity(data) {
-        const sortedCategories = [];
-        const unsortedCategories = Array.from(data.categories);
-        while (unsortedCategories.length > 0) {
-          const category = unsortedCategories.shift();
-          sortedCategories.push(category);
-          const similarities = Object.entries(category.categorySimilarities).map(([name, similarity]) => ({name, similarity}));
-          similarities.sort((a, b) => b.similarity - a.similarity);
-          for (const categorySimilarity of similarities) {
-            if (categorySimilarity.similarity <= 0.3) {
-              break;
-            }
-            const categoryIndex = unsortedCategories.findIndex(category => category.name == categorySimilarity.name);
-            if (categoryIndex !== -1) {
-              sortedCategories.push(unsortedCategories.splice(categoryIndex, 1)[0]);
-            }
-          }
-        }
-        data.categories = sortedCategories;
-      }
-
-      function sortCardsBySimilarity(data) {
-        const sortedCards = [];
-        const unsortedCards = Array.from(data.cards);
-        while (unsortedCards.length > 0) {
-          const card = unsortedCards.shift();
-          sortedCards.push(card);
-          const similarities = Object.entries(card.cardSimilarities).map(([text, similarity]) => ({text, similarity}));
-          similarities.sort((a, b) => b.similarity - a.similarity);
-          for (const cardSimilarity of similarities) {
-            if (cardSimilarity.similarity <= 0.3) {
-              break;
-            }
-            const cardIndex = unsortedCards.findIndex(card => card.text == cardSimilarity.text);
-            if (cardIndex !== -1) {
-              sortedCards.push(unsortedCards.splice(cardIndex, 1)[0]);
-            }
-          }
-        }
-        data.cards = sortedCards;
-      }
-
-      // Category refinement
-      const categoriesContainer = document.querySelector('.category-refinement .categories');
-      const categoryTemplate = document.querySelector('.category-template');
-      const cardTemplate = document.querySelector('.card-template');
-      const recalculateButton = document.querySelector('.category-refinement .button-recalculate');
-
-      recalculateButton.addEventListener('click', () => calculateAndRender());
-
-      const similarityHoverEffectStyleElement = document.querySelector('.similarity-hover-effect-stylesheet');
-      const similarityHoverEffectToggleInput = document.querySelector('#similarity-hover-effect-toggle');
-      let isSimilarityHoverEffectEnabled = similarityHoverEffectToggleInput.checked;
-      similarityHoverEffectToggleInput.addEventListener('change', () => isSimilarityHoverEffectEnabled = similarityHoverEffectToggleInput.checked);
-      let isSimilarityHoverEffectApplied = false;
-      document.body.addEventListener('mouseover', function handleMouseOver() {
-        if ( ! isSimilarityHoverEffectApplied) {
-          return;
-        }
-        similarityHoverEffectStyleElement.innerHTML = '';
-        isSimilarityHoverEffectApplied = false;
-      });
-
-      function renderCategoryRefinement(data) {
-        const categoryElements = [];
-        for (const category of data.categories) {
-          const categoryElement = document.importNode(categoryTemplate.content.children[0], true);
-          const similarityHoverSelector = [];
-          const cardElements = [];
-          const cardEntries = Object.entries(data.cardCountsByCategory[category.name]);
-          cardEntries.sort(([textA], [textB]) => textA.localeCompare(textB));
-          for (const [cardText, cardCount] of cardEntries) {
-            const cardElement = document.importNode(cardTemplate.content.children[0], true);
-            const cardPercentage = Math.round((cardCount / data.resultCount) * 100.0);
-            const weight = (cardPercentage / 100.0) / 2.0;
-            cardElement.style.setProperty('--weight', weight);
-            cardElement.querySelector('.card-text').textContent = cardText;
-            cardElement.querySelector('.card-correlation').textContent = `${cardPercentage}%`;
-            cardElement.querySelector('.card-correlation').title = `${cardCount}/${data.resultCount} participants`;
-            cardElements.push(cardElement);
-            // Similarity hover effect
-            const textBase64 = btoa(cardText);
-            cardElement.setAttribute('data-text-b64', textBase64);
-            similarityHoverSelector.push(`.category-refinement .card[data-text-b64="${textBase64}"]`);
-            cardElement.addEventListener('mouseover', function handleMouseOver(event) {
-              if ( ! isSimilarityHoverEffectEnabled) {
-                return;
-              }
-              event.stopPropagation();
-              isSimilarityHoverEffectApplied = true;
-              similarityHoverEffectStyleElement.innerHTML = `.category-refinement .card[data-text-b64="${textBase64}"] { box-shadow: var(--similarity-highlight); }`;
-            });
-          }
-          category.element = categoryElement;
-          categoryElement._category = category;
-          const categoryNameElement = categoryElement.querySelector('.category-name');
-          categoryNameElement.textContent = renamedCategories[category.name] || category.name;
-          categoryNameElement.addEventListener('input', () => {
-            renamedCategories[category.name] = categoryNameElement.textContent;
-            categoryNameElement.classList.add('dirty');
-            updateRecalculateButton();
-          });
-          setContentEditablePlaintext(categoryNameElement);
-          categoryElement.querySelector('.category-cards').replaceChildren(...cardElements);
-          categoryElement.querySelector('.category-merge-button-start').addEventListener('click', handleMergeStart);
-          categoryElement.querySelector('.category-merge-button-end').addEventListener('click', handleMergeEnd);
-          categoryElement.querySelector('.category-merge-button-cancel').addEventListener('click', handleMergeCancel);
-          categoryElements.push(categoryElement);
-          const thisCategoryMergedCategories = (
-            Object.entries(mergedCategories)
-            .filter(([sourceName, targetName]) => targetName == category.name)
-            .map(([sourceName, targetName]) => sourceName)
-          );
-          if (thisCategoryMergedCategories.length > 0) {
-            categoryElement.classList.add('has-merged-categories');
-            for (sourceCategoryName of thisCategoryMergedCategories) {
-              renderMergeToolMergedCategory(categoryElement, {name: sourceCategoryName});
-            }
-          }
-          // Similarity hover effect
-          const similarityStyleText = `${similarityHoverSelector.join(', ')} { box-shadow: var(--similarity-highlight); }`;
-          categoryElement.addEventListener('mouseover', function handleMouseOver() {
-            if ( ! isSimilarityHoverEffectEnabled) {
-              return;
-            }
-            event.stopPropagation();
-            isSimilarityHoverEffectApplied = true;
-            similarityHoverEffectStyleElement.innerHTML = similarityStyleText;
-          });
-        }
-        categoriesContainer.replaceChildren(...categoryElements);
-        updateRecalculateButton();
-      }
-
-      function handleMergeStart() {
-        const categoryElement = this.closest('.category');
-        categoriesContainer.classList.add('is-merge-active');
-        categoryElement.classList.add('is-merge-source');
-      }
-      function handleMergeCancel() {
-        const categoryElement = this.closest('.category');
-        categoriesContainer.classList.remove('is-merge-active');
-        categoryElement.classList.remove('is-merge-source');
-      }
-      function handleMergeEnd() {
-        const targetCategoryElement = this.closest('.category');
-        const sourceCategoryElement = categoriesContainer.querySelector('.is-merge-source');
-        const targetCategory = targetCategoryElement._category;
-        const sourceCategory = sourceCategoryElement._category;
-        categoriesContainer.classList.remove('is-merge-active');
-        sourceCategoryElement.classList.remove('is-merge-source');
-        sourceCategoryElement.classList.add('is-merge-pending');
-        targetCategoryElement.classList.add('has-merged-categories');
-        renderMergeToolMergedCategory(targetCategoryElement, sourceCategory);
-        mergedCategories[sourceCategory.name] = targetCategory.name;
-        updateRecalculateButton();
-      }
-      function handleMergeUndo() {
-        const undoButton = this;
-        const targetCategoryElement = undoButton.closest('.category');
-        const targetCategory = targetCategoryElement._category;
-        const sourceCategory = undoButton._sourceCategory;
-        const sourceCategoryElement = sourceCategory.element;
-        if (sourceCategoryElement) {
-          if (sourceCategoryElement.classList.contains('is-merge-pending')) {
-            sourceCategoryElement.classList.remove('is-merge-pending');
-          }
-          undoButton.closest('.merged-category').remove();
-        }
+    function buildRecord(filename, rows) {
+      const first = rows[0];
+      const categories = new Map();
+      const uncategorized = [];
+      const cardTextById = new Map();
+      for (const row of rows) {
+        cardTextById.set(row.card_id, row.card_text);
+        if (row.placement === 'uncategorized') uncategorized.push(row.card_id);
         else {
-          undoButton.closest('.merged-category').classList.add('is-undo-pending');
-        }
-        delete mergedCategories[sourceCategory.name];
-        const hasMoreMergedCategories = Object.values(mergedCategories).includes(targetCategory.name);
-        if ( ! hasMoreMergedCategories) {
-          targetCategoryElement.classList.remove('has-merged-categories');
-        }
-        updateRecalculateButton();
-      }
-      function updateRecalculateButton() {
-        if (categoriesContainer.querySelector('.is-merge-pending, .is-undo-pending, .dirty')) {
-          recalculateButton.disabled = false;
-        }
-        else {
-          recalculateButton.disabled = true;
+          if (!categories.has(row.category_name)) categories.set(row.category_name, []);
+          categories.get(row.category_name).push(row.card_id);
         }
       }
+      return {
+        filename,
+        deckId:first.deck_id,
+        participantCode:first.participant_code || '(anonymous)',
+        exportedAt:first.exported_at_utc || '',
+        categories,
+        uncategorized,
+        cardTextById,
+      };
+    }
 
-      function renderMergeToolMergedCategory(targetCategoryElement, sourceCategory) {
-        const mergedContainer = targetCategoryElement.querySelector('.merged-categories');
-        const mergedCategoryElement = document.importNode(document.querySelector('.merged-category-template').content.children[0], true);
-        mergedCategoryElement.querySelector('.merged-category-name').textContent = sourceCategory.name;
-        const undoButton = mergedCategoryElement.querySelector('.merged-category-button-undo');
-        undoButton._sourceCategory = sourceCategory;
-        undoButton.addEventListener('click', handleMergeUndo);
-        mergedContainer.appendChild(mergedCategoryElement);
+    function clearAll() {
+      records = [];
+      refreshDeckOptions();
+      message.className = 'message';
+      message.textContent = 'No files loaded.';
+      render();
+    }
+
+    function refreshDeckOptions() {
+      const ids = Array.from(new Set(records.map(record => record.deckId)));
+      const previous = deckSelect.value;
+      deckSelect.replaceChildren(...ids.map(id => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `${CARD_DECKS[id].title} (${records.filter(record => record.deckId === id).length})`;
+        return option;
+      }));
+      deckSelect.disabled = ids.length === 0;
+      if (ids.includes(previous)) deckSelect.value = previous;
+    }
+
+    function render() {
+      const deckId = deckSelect.value;
+      const selected = records.filter(record => record.deckId === deckId);
+      renderParticipants(selected);
+      renderLabels(selected);
+      renderPairs(selected, CARD_DECKS[deckId]);
+    }
+
+    function renderParticipants(selected) {
+      participantBody.replaceChildren(...selected.map(record => {
+        const row = document.createElement('tr');
+        const categorizedCount = Array.from(record.categories.values()).reduce((total, cards) => total + cards.length, 0);
+        const values = [
+          record.filename,
+          record.participantCode,
+          record.exportedAt ? new Date(record.exportedAt).toLocaleString() : '',
+          record.categories.size,
+          categorizedCount,
+          record.uncategorized.length,
+        ];
+        for (const value of values) {
+          const cell = document.createElement('td');
+          cell.textContent = String(value);
+          row.appendChild(cell);
+        }
+        return row;
+      }));
+    }
+
+    function renderLabels(selected) {
+      const counts = new Map();
+      for (const record of selected) {
+        const labels = new Set(record.categories.keys());
+        if (includeUncategorized.checked && record.uncategorized.length) labels.add('(Uncategorized)');
+        for (const label of labels) counts.set(label, (counts.get(label) || 0) + 1);
       }
-
-      // Card-category association table
-      const associationTable = document.querySelector('.association-table');
-
-      associationTable.addEventListener('click', function handleClick(event) {
-        if (event.target.matches('.associations-button-swap-axes')) {
-          associationTableSwapAxes(event.target);
+      const entries = Array.from(counts.entries()).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
+      labelsBody.replaceChildren(...entries.map(([label,count]) => {
+        const row = document.createElement('tr');
+        const percentage = selected.length ? Math.round(count / selected.length * 100) : 0;
+        for (const value of [label, count, `${percentage}%`]) {
+          const cell = document.createElement('td');
+          cell.textContent = String(value);
+          row.appendChild(cell);
         }
-      });
+        return row;
+      }));
+    }
 
-      function renderAssociationTable(data) {
-        let tableHtml = '';
-        // Categories on X-axis, Cards on Y-axis
-        tableHtml += '<tbody class="x-categories-y-cards">';
-        tableHtml += '<tr>';
-        tableHtml += `
-        <th>
-          Categories →
-          <br />
-          Cards ↓
-          <button class="associations-button-swap-axes" data-target="x-cards-y-categories">Swap axes</button>
-        </th>
-        `;
-        for (const category of data.categories) {
-          tableHtml += `
-          <th class="x-axis-head-cell">
-            <div class="x-axis-head-text">${asTextContent(renamedCategories[category.name] || category.name)}</div>
-          </th>
-          `;
-        }
-        tableHtml += '</tr>';
-        for (const card of data.cards) {
-          tableHtml += `<tr>`;
-          tableHtml += `<th class="y-axis-head-text">${asTextContent(card.text)}</th>`;
-          for (const category of data.categories) {
-            const cardCount = data.cardCountsByCategory[category.name][card.text];
-            const cardPercentage = cardCount ? Math.round((cardCount / data.resultCount) * 100.0) : 0;
-            const weight = cardPercentage / 100.0;
-            const fontColor = weight > 0.5 ? '--light' : '--dark';
-            if (cardCount > 0) {
-              tableHtml += `
-              <td>
-                <div
-                  class="card-correlation"
-                  style="--weight: ${weight}; color: var(${fontColor});"
-                  title="${cardCount}/${data.resultCount} participants\n\nCard: ${asTextContent(card.text)}\n\nCategory: ${asTextContent(renamedCategories[category.name] || category.name)}"
-                >${cardPercentage}</div>
-              </td>
-              `;
-            }
-            else {
-              tableHtml += `<td><div class="card-correlation"></div></td>`;
-            }
+    function placementMap(record) {
+      const map = new Map();
+      for (const [category, cards] of record.categories.entries()) {
+        for (const cardId of cards) map.set(cardId, category);
+      }
+      if (includeUncategorized.checked) {
+        for (const cardId of record.uncategorized) map.set(cardId, '(Uncategorized)');
+      }
+      return map;
+    }
+
+    function renderPairs(selected, deck) {
+      if (!deck) {
+        pairsBody.replaceChildren();
+        return;
+      }
+      const maps = selected.map(placementMap);
+      const rows = [];
+      for (const card of deck.cards) {
+        const scores = [];
+        for (const other of deck.cards) {
+          if (other.id === card.id) continue;
+          let eligible = 0;
+          let same = 0;
+          for (const map of maps) {
+            if (!map.has(card.id) || !map.has(other.id)) continue;
+            eligible += 1;
+            if (map.get(card.id) === map.get(other.id)) same += 1;
           }
-          tableHtml += '</tr>';
+          if (eligible) scores.push({other, eligible, same, percentage:Math.round(same / eligible * 100)});
         }
-        tableHtml += '</tbody>';
-        // Cards on X-axis, Categories on Y-axis
-        tableHtml += '<tbody class="x-cards-y-categories" style="display: none;">';
-        tableHtml += '<tr>';
-        tableHtml += `
-        <th>
-          Cards →
-          <br />
-          Categories ↓
-          <button class="associations-button-swap-axes" data-target="x-categories-y-cards">Swap axes</button>
-        </th>
-        `;
-        for (const card of data.cards) {
-          tableHtml += `
-          <th class="x-axis-head-cell">
-            <div class="x-axis-head-text">${asTextContent(card.text)}</div>
-          </th>
-          `;
+        scores.sort((a,b) => b.percentage-a.percentage || b.same-a.same || a.other.text.localeCompare(b.other.text));
+        const row = document.createElement('tr');
+        const cardCell = document.createElement('td');
+        cardCell.textContent = card.text;
+        const pairCell = document.createElement('td');
+        const list = document.createElement('ol');
+        list.className = 'pair-list';
+        for (const score of scores.slice(0,5)) {
+          const item = document.createElement('li');
+          item.textContent = `${score.other.text} — ${score.percentage}% (${score.same}/${score.eligible})`;
+          list.appendChild(item);
         }
-        tableHtml += '</tr>';
-        for (const category of data.categories) {
-          tableHtml += `<tr>`;
-          tableHtml += `<th class="y-axis-head-text">${asTextContent(renamedCategories[category.name] || category.name)}</th>`;
-          for (const card of data.cards) {
-            const cardCount = data.cardCountsByCategory[category.name][card.text];
-            const cardPercentage = cardCount ? Math.round((cardCount / data.resultCount) * 100.0) : 0;
-            const weight = cardPercentage / 100.0;
-            const fontColor = weight > 0.5 ? '--light' : '--dark';
-            if (cardCount > 0) {
-              tableHtml += `
-              <td>
-                <div
-                  class="card-correlation"
-                  style="--weight: ${weight}; color: var(${fontColor});"
-                  title="${cardCount}/${data.resultCount} participants\n\nCard: ${asTextContent(card.text)}\n\nCategory: ${asTextContent(renamedCategories[category.name] || category.name)}"
-                >${cardPercentage}</div>
-              </td>
-              `;
-            }
-            else {
-              tableHtml += `<td><div class="card-correlation"></div></td>`;
-            }
-          }
-          tableHtml += '</tr>';
-        }
-        tableHtml += '</tbody>';
-        associationTable.innerHTML = tableHtml;
+        pairCell.appendChild(list);
+        row.append(cardCell, pairCell);
+        rows.push(row);
       }
-
-      function associationTableSwapAxes(button) {
-        const target = button.getAttribute('data-target');
-        if (target == 'x-categories-y-cards') {
-          document.querySelector('.association-table .x-cards-y-categories').style.display = 'none';
-          document.querySelector('.association-table .x-categories-y-cards').style.display = '';
-        }
-        else {
-          document.querySelector('.association-table .x-categories-y-cards').style.display = 'none';
-          document.querySelector('.association-table .x-cards-y-categories').style.display = '';
-        }
-      }
-    </script>
-  </body>
+      pairsBody.replaceChildren(...rows);
+    }
+  </script>
+</body>
 </html>

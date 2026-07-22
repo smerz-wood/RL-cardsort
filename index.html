@@ -239,35 +239,19 @@
       }
 
       function openDeck(deckId, deck, restart) {
-        let draft = loadDraft(deckId);
-
         if (restart) {
           const confirmed = window.confirm(
-            'Restart this card sort? The saved draft on this device will be replaced.'
+            'Restart this card sort? The saved draft on this device will be replaced when you save.'
           );
           if (!confirmed) return;
-          draft = null;
         }
 
-        if (!draft) {
-          const newDraft = {
-            participantCode: '',
-            result: {
-              categories: [],
-              uncategorized: deck.cards.map(card => card.id),
-            },
-          };
+        const query = new URLSearchParams({ deck: deckId });
+        if (restart) query.set('restart', '1');
 
-          try {
-            CardSortStorage.saveDraft(deckId, newDraft);
-          } catch (error) {
-            console.error('Could not create the card-sort draft.', error);
-            window.alert('The draft could not be saved on this device. Check browser storage permissions.');
-            return;
-          }
-        }
-
-        window.location.assign(`card-sort.html?deck=${encodeURIComponent(deckId)}`);
+        // The sorting page can initialize a new draft itself. Do not make
+        // browser storage a prerequisite for opening a deck.
+        window.location.assign(`card-sort.html?${query.toString()}`);
       }
 
       function showMessage(message, className) {

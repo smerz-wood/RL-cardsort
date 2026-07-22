@@ -367,13 +367,22 @@
     const params = new URLSearchParams(window.location.search);
     const deckId = params.get('deck');
     const deck = CARD_DECKS[deckId];
-    if (!deck) window.location.replace('index.html');
+    const restartRequested = params.get('restart') === '1';
 
-    let draft = deck ? CardSortStorage.loadDraft(deckId) : null;
-    if (deck && !draft) {
-      alert('No local draft exists for this deck. Start from the home page.');
+    if (!deck) {
       window.location.replace('index.html');
+      throw new Error('Unknown card deck.');
     }
+
+    let draft = null;
+    if (!restartRequested) {
+      try {
+        draft = CardSortStorage.loadDraft(deckId);
+      } catch (error) {
+        console.warn('Could not load the saved draft.', error);
+      }
+    }
+    draft = normalizeDraft(draft);
 
     const deckTitle = document.querySelector('.deck-title');
     const deckMeta = document.querySelector('.deck-meta');
@@ -405,6 +414,35 @@
 
     initialize();
 
+    function normalizeDraft(candidate) {
+      const now = new Date().toISOString();
+      const isValid = candidate && typeof candidate === 'object';
+      const result = isValid && candidate.result && typeof candidate.result === 'object'
+        ? candidate.result
+        : {};
+      const categories = Array.isArray(result.categories) ? result.categories : [];
+      const uncategorized = Array.isArray(result.uncategorized)
+        ? result.uncategorized
+        : deck.cards.map(card => card.id);
+
+      return {
+        ...(isValid ? candidate : {}),
+        deckId,
+        participantCode: isValid && typeof candidate.participantCode === 'string'
+          ? candidate.participantCode
+          : '',
+        createdAt: isValid && candidate.createdAt ? candidate.createdAt : now,
+        updatedAt: isValid && candidate.updatedAt ? candidate.updatedAt : now,
+        result: { categories, uncategorized },
+        _isNew: !isValid || restartRequested,
+      };
+    }
+
+    function formatSavedTime(value) {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? 'an earlier session' : date.toLocaleString();
+    }
+
     function initialize() {
       deckTitle.textContent = deck.title;
       deckMeta.textContent = `${deck.cards.length} cards · participant-created categories`;
@@ -422,7 +460,8 @@
         event.preventDefault();
         event.returnValue = '';
       });
-      setSaved(`Loaded saved draft from ${new Date(draft.updatedAt).toLocaleString()}`);
+      setSaved(draft._isNew ? 'New draft' : `Loaded saved draft from ${formatSavedTime(draft.updatedAt)}`);
+      delete draft._isNew;
       refreshLayouts();
     }
 

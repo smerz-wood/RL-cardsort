@@ -3,172 +3,221 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Library Website Card Sort</title>
+  <title>Card Sorting</title>
   <style>
-    :root { --ink:#17202a; --muted:#5d6d7e; --line:#d5d8dc; --brand:#174a7e; --light:#eef5fb; --danger:#9b1c1c; }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink); background:#f7f8fa; }
-    header { background:var(--brand); color:#fff; padding:1.4rem; }
-    header h1 { margin:0 0 .35rem; font-size:clamp(1.6rem,4vw,2.3rem); }
-    header p { margin:0; max-width:70rem; }
-    main { width:min(980px,100%); margin:auto; padding:1.25rem; }
-    .notice { padding:1rem; background:#fff8dc; border-left:5px solid #b9770e; margin-bottom:1rem; }
-    .tabs { display:flex; gap:.35rem; border-bottom:2px solid var(--line); }
-    .tab { border:0; border-radius:.45rem .45rem 0 0; padding:.8rem 1rem; font-weight:750; cursor:pointer; background:#e2e6ea; color:var(--ink); }
-    .tab[aria-selected="true"] { background:var(--brand); color:#fff; }
-    .deck-panel { background:#fff; padding:1.25rem; border:1px solid var(--line); border-top:0; box-shadow:0 3px 12px rgba(0,0,0,.06); }
-    .deck-panel h2 { margin-top:0; }
-    .meta { color:var(--muted); margin-bottom:1rem; }
-    label { display:block; font-weight:700; margin:.75rem 0 .35rem; }
-    input { width:min(100%,25rem); padding:.65rem; font:inherit; border:1px solid #9aa4ad; border-radius:.35rem; }
-    .status { margin:1rem 0; padding:.8rem; background:var(--light); border-radius:.35rem; }
-    .actions { display:flex; flex-wrap:wrap; gap:.65rem; margin-top:1rem; }
-    button, .button-link { display:inline-block; padding:.65rem .85rem; border:1px solid var(--brand); border-radius:.35rem; font:inherit; font-weight:700; cursor:pointer; background:#fff; color:var(--brand); text-decoration:none; }
-    button.primary { background:var(--brand); color:#fff; }
-    button.danger { color:var(--danger); border-color:var(--danger); }
-    button:disabled { cursor:not-allowed; opacity:.45; }
-    .instructions { margin-top:1.5rem; background:#fff; border:1px solid var(--line); padding:1rem 1.25rem; }
-    .links { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:1.25rem; }
-    code { background:#eef1f4; padding:.1rem .25rem; }
-    footer { width:min(980px,100%); margin:auto; padding:0 1.25rem 2rem; color:var(--muted); }
+    :root {
+      --background: #f5f5f3;
+      --surface: #ffffff;
+      --text: #171717;
+      --muted: #6b6b66;
+      --border: #d8d8d3;
+      --border-strong: #b8b8b1;
+      --danger: #9f2f2f;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--background);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 15px;
+    }
+
+    button { font: inherit; }
+
+    .page {
+      width: min(760px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0;
+    }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 650;
+      letter-spacing: -.015em;
+    }
+
+    .deck-count {
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    .deck-list {
+      margin: 0;
+      padding: 0;
+      border-top: 1px solid var(--border);
+      list-style: none;
+    }
+
+    .deck-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 20px;
+      align-items: center;
+      min-height: 72px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .deck-title {
+      margin: 0 0 3px;
+      font-size: .96rem;
+      font-weight: 600;
+    }
+
+    .deck-meta {
+      color: var(--muted);
+      font-size: .8rem;
+    }
+
+    .deck-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 3px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    button:hover { border-color: var(--text); }
+
+    button:focus-visible {
+      outline: 2px solid var(--text);
+      outline-offset: 2px;
+    }
+
+    button.primary {
+      border-color: var(--text);
+      background: var(--text);
+      color: #fff;
+    }
+
+    button.reset { color: var(--danger); }
+
+    .empty {
+      padding: 24px 0;
+      color: var(--muted);
+    }
+
+    @media (max-width: 560px) {
+      .page {
+        width: min(100% - 24px, 760px);
+        padding: 32px 0;
+      }
+
+      .deck-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .deck-actions { justify-content: flex-start; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Library website card sort</h1>
-    <p>Choose one deck, organize its cards into categories that make sense to you, name those categories, and download your completed result as a CSV file.</p>
-  </header>
-  <main>
-    <div class="notice"><strong>Saving is device-specific.</strong> One draft is stored for each deck in this browser. Nothing is uploaded to GitHub automatically.</div>
+  <main class="page">
+    <header>
+      <h1>Card sorting</h1>
+      <span class="deck-count"></span>
+    </header>
 
-    <div class="tabs" role="tablist" aria-label="Card-sort decks">
-      <button class="tab" role="tab" aria-selected="true" data-deck="sk">SK deck</button>
-      <button class="tab" role="tab" aria-selected="false" data-deck="smw">SMW deck</button>
-    </div>
-
-    <section class="deck-panel" aria-live="polite">
-      <h2 class="deck-title"></h2>
-      <p class="deck-description"></p>
-      <div class="meta"></div>
-
-      <label for="participant-code">Participant code or initials</label>
-      <input id="participant-code" maxlength="32" autocomplete="off" placeholder="For example: P07 or AB">
-
-      <div class="status"></div>
-      <div class="actions">
-        <button class="primary start"></button>
-        <button class="download" disabled>Download saved CSV</button>
-        <button class="danger reset" disabled>Start over</button>
-      </div>
-    </section>
-
-    <section class="instructions">
-      <h2>Participant instructions</h2>
-      <ol>
-        <li>Choose the assigned deck and enter your participant code.</li>
-        <li>Create and name categories in your own words.</li>
-        <li>Drag every card into the category where you would expect to find it.</li>
-        <li>Select <strong>Save draft on this device</strong> whenever needed.</li>
-        <li>Select <strong>Download completed CSV</strong> and return the downloaded file to the study coordinator.</li>
-      </ol>
-      <p>The CSV contains one readable row per card. Cards left in the yellow uncategorized column are clearly marked as <code>uncategorized</code>.</p>
-    </section>
-
-    <nav class="links" aria-label="Project tools">
-      <a class="button-link" href="analysis.html">Open CSV analysis tool</a>
-      <a class="button-link" href="data/SK-DECK-DATA.csv">Download SK source data</a>
-      <a class="button-link" href="data/SMW-DECK-DATA.csv">Download SMW source data</a>
-      <a class="button-link" href="GITHUB-PAGES-GUIDE.html">GitHub Pages guide</a>
-    </nav>
+    <ul class="deck-list" aria-label="Available card decks"></ul>
   </main>
-  <footer>Use participant codes instead of full names when possible. Reset the saved deck after exporting when several participants share one computer.</footer>
 
   <script src="decks.js"></script>
   <script src="storage.js"></script>
-  <script src="csv-utils.js"></script>
   <script>
     'use strict';
-    const tabs = Array.from(document.querySelectorAll('.tab'));
-    const title = document.querySelector('.deck-title');
-    const description = document.querySelector('.deck-description');
-    const meta = document.querySelector('.meta');
-    const codeInput = document.querySelector('#participant-code');
-    const status = document.querySelector('.status');
-    const startButton = document.querySelector('.start');
-    const downloadButton = document.querySelector('.download');
-    const resetButton = document.querySelector('.reset');
-    let activeDeckId = 'sk';
 
-    tabs.forEach(tab => tab.addEventListener('click', () => selectDeck(tab.dataset.deck)));
-    startButton.addEventListener('click', startOrResume);
-    downloadButton.addEventListener('click', downloadSavedCsv);
-    resetButton.addEventListener('click', resetDeck);
-    selectDeck(activeDeckId);
+    const deckList = document.querySelector('.deck-list');
+    const deckCount = document.querySelector('.deck-count');
+    const entries = Object.entries(CARD_DECKS || {});
 
-    function selectDeck(deckId) {
-      activeDeckId = deckId;
-      tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.deck === deckId)));
-      render();
+    deckCount.textContent = `${entries.length} deck${entries.length === 1 ? '' : 's'}`;
+
+    if (!entries.length) {
+      const empty = document.createElement('li');
+      empty.className = 'empty';
+      empty.textContent = 'No card decks are available.';
+      deckList.append(empty);
     }
 
-    function render() {
-      const deck = CARD_DECKS[activeDeckId];
-      const draft = CardSortStorage.loadDraft(activeDeckId);
+    for (const [deckId, deck] of entries) {
+      const savedDraft = CardSortStorage.loadDraft(deckId);
+      const row = document.createElement('li');
+      row.className = 'deck-row';
+
+      const details = document.createElement('div');
+      const title = document.createElement('h2');
+      const meta = document.createElement('div');
+      title.className = 'deck-title';
       title.textContent = deck.title;
-      description.textContent = deck.description;
-      meta.textContent = `${deck.cards.length} cards · open card sort · one browser-local draft`;
-      codeInput.value = draft?.participantCode || '';
-      if (draft) {
-        const categorized = draft.result.categories.reduce((total, category) => total + category.cards.length, 0);
-        status.textContent = `Saved locally ${new Date(draft.updatedAt).toLocaleString()}. ${categorized} categorized; ${draft.result.uncategorized.length} uncategorized.`;
-        startButton.textContent = 'Resume saved sort';
-        downloadButton.disabled = false;
-        resetButton.disabled = false;
+      meta.className = 'deck-meta';
+      meta.textContent = `${deck.cards.length} card${deck.cards.length === 1 ? '' : 's'}`;
+      details.append(title, meta);
+
+      const actions = document.createElement('div');
+      actions.className = 'deck-actions';
+
+      const openButton = document.createElement('button');
+      openButton.type = 'button';
+      openButton.className = 'primary';
+      openButton.textContent = savedDraft ? 'Continue' : 'Start';
+      openButton.addEventListener('click', () => openDeck(deckId, deck, false));
+      actions.append(openButton);
+
+      if (savedDraft) {
+        const resetButton = document.createElement('button');
+        resetButton.type = 'button';
+        resetButton.className = 'reset';
+        resetButton.textContent = 'Restart';
+        resetButton.addEventListener('click', () => openDeck(deckId, deck, true));
+        actions.append(resetButton);
       }
-      else {
-        status.textContent = 'No draft is saved for this deck in this browser.';
-        startButton.textContent = 'Start this card sort';
-        downloadButton.disabled = true;
-        resetButton.disabled = true;
-      }
+
+      row.append(details, actions);
+      deckList.append(row);
     }
 
-    function requireParticipantCode() {
-      const value = codeInput.value.trim();
-      if (!value) {
-        alert('Enter a participant code or initials first.');
-        codeInput.focus();
-        return null;
+    function openDeck(deckId, deck, restart) {
+      let draft = CardSortStorage.loadDraft(deckId);
+
+      if (restart) {
+        if (!confirm('Restart this card sort? The saved draft on this device will be replaced.')) return;
+        draft = null;
       }
-      return value;
-    }
 
-    function startOrResume() {
-      const participantCode = requireParticipantCode();
-      if (!participantCode) return;
-      let draft = CardSortStorage.loadDraft(activeDeckId);
-      if (!draft) draft = CardSortStorage.createNewDraft(activeDeckId, participantCode);
-      draft.participantCode = participantCode;
-      CardSortStorage.saveDraft(activeDeckId, draft);
-      window.location.href = `card-sort.html?deck=${encodeURIComponent(activeDeckId)}`;
-    }
-
-    function downloadSavedCsv() {
-      const draft = CardSortStorage.loadDraft(activeDeckId);
-      if (!draft) return;
-      CardSortCsv.downloadDraft(CARD_DECKS[activeDeckId], draft);
-    }
-
-    function resetDeck() {
-      const deck = CARD_DECKS[activeDeckId];
-      const participantCode = codeInput.value.trim();
-      if (!confirm(`Delete the saved ${deck.shortTitle} draft from this browser and start over?`)) return;
-      CardSortStorage.clearDraft(activeDeckId);
-      if (participantCode) {
-        CardSortStorage.saveDraft(activeDeckId, CardSortStorage.createNewDraft(activeDeckId, participantCode));
-        window.location.href = `card-sort.html?deck=${encodeURIComponent(activeDeckId)}`;
+      if (!draft) {
+        draft = {
+          participantCode: '',
+          result: {
+            categories: [],
+            uncategorized: deck.cards.map(card => card.id),
+          },
+        };
+        CardSortStorage.saveDraft(deckId, draft);
       }
-      render();
+
+      window.location.href = `cardsort.html?deck=${encodeURIComponent(deckId)}`;
     }
   </script>
 </body>

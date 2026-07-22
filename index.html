@@ -256,34 +256,26 @@
         const deck = window.CARD_DECKS[deckId];
         if (!deck) return;
 
+        const hasDraft = Boolean(safeLoadDraft(deckId));
+        let mode = hasDraft ? 'continue' : 'start';
+
         if (restart) {
           const confirmed = window.confirm(
-            'Restart this card sort? The saved draft on this device will be replaced.'
+            'Restart this card sort? This permanently discards the saved arrangement, category names, and participant code on this device.'
           );
           if (!confirmed) return;
-
-          const clear = CardSortStorage.clearDraft || CardSortStorage.deleteDraft;
-          if (typeof clear === 'function') clear(deckId);
+          mode = 'restart';
         }
 
-        let draft = restart ? null : safeLoadDraft(deckId);
+        // A unique launch value forces a fresh page load instead of allowing the
+        // browser back/forward cache to display the previous sorter DOM.
+        const query = new URLSearchParams({
+          deck: deckId,
+          mode,
+          launch: String(Date.now()),
+        });
 
-        if (!draft) {
-          draft = typeof CardSortStorage.createNewDraft === 'function'
-            ? CardSortStorage.createNewDraft(deckId, '')
-            : {
-                deckId,
-                participantCode: '',
-                result: {
-                  categories: [],
-                  uncategorized: deck.cards.map(card => card.id),
-                },
-              };
-
-          CardSortStorage.saveDraft(deckId, draft);
-        }
-
-        window.location.href = `card-sort.html?deck=${encodeURIComponent(deckId)}`;
+        window.location.href = `card-sort.html?${query.toString()}`;
       }
 
       function renderError(message) {

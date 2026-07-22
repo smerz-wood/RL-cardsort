@@ -1,5 +1,3 @@
-<!doctype html>
-<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -448,24 +446,59 @@
       const params = new URLSearchParams(window.location.search);
       const deckId = params.get('deck');
       const deck = deckId ? CARD_DECKS[deckId] : null;
-      const restartRequested = params.get('restart') === '1';
+      const launchMode = params.get('mode') || 'continue';
+      const restartRequested = launchMode === 'restart' || params.get('restart') === '1';
+      const startRequested = launchMode === 'start';
 
       if (!deck || !Array.isArray(deck.cards)) {
         fail('This card deck could not be found. Return to the deck list and choose a valid deck.');
         return;
       }
 
-      let draft = null;
+      let loadedDraft = null;
 
-      if (!restartRequested) {
+      if (restartRequested) {
         try {
-          draft = CardSortStorage.loadDraft(deckId);
+          const clearDraft = CardSortStorage.clearDraft || CardSortStorage.deleteDraft;
+          if (typeof clearDraft === 'function') clearDraft(deckId);
+        } catch (error) {
+          console.warn('Could not clear the previous draft.', error);
+        }
+      }
+      else if (!startRequested) {
+        try {
+          loadedDraft = CardSortStorage.loadDraft(deckId);
         } catch (error) {
           console.warn('Could not load the saved draft.', error);
         }
       }
 
-      draft = normalizeDraft(draft);
+      const launchState = loadedDraft
+        ? 'continued'
+        : restartRequested
+          ? 'restarted'
+          : 'started';
+
+      let sourceDraft = loadedDraft;
+      if (!sourceDraft && typeof CardSortStorage.createNewDraft === 'function') {
+        try {
+          sourceDraft = CardSortStorage.createNewDraft(deckId, '');
+        } catch (error) {
+          console.warn('Could not create a randomized draft through storage.js.', error);
+        }
+      }
+
+      let draft = normalizeDraft(sourceDraft);
+
+      // Save the newly initialized draft immediately. Returning to the landing
+      // page will therefore show Continue, even before the participant presses Save.
+      if (!loadedDraft) {
+        try {
+          draft = CardSortStorage.saveDraft(deckId, draft);
+        } catch (error) {
+          console.warn('Could not persist the initial draft.', error);
+        }
+      }
 
       const deckTitle = document.querySelector('.deck-title');
       const deckMeta = document.querySelector('.deck-meta');
@@ -619,11 +652,15 @@
           event.returnValue = '';
         });
 
-        setSaved(
-          draft._isNew
-            ? 'New draft'
-            : `Loaded saved draft from ${formatSavedTime(draft.updatedAt)}`
-        );
+        if (launchState === 'continued') {
+          setSaved(`Resumed saved draft from ${formatSavedTime(draft.updatedAt)}`);
+        }
+        else if (launchState === 'restarted') {
+          setSaved('Previous draft discarded · fresh randomized sort');
+        }
+        else {
+          setSaved('New randomized sort');
+        }
 
         delete draft._isNew;
         refreshLayouts();
